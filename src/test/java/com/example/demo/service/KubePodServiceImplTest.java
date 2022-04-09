@@ -9,7 +9,6 @@ import io.fabric8.kubernetes.api.model.apps.DeploymentListBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import org.junit.Rule;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
@@ -21,10 +20,11 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.Mockito.when;
 
 
-@Tag("test")
 @ExtendWith(MockitoExtension.class)
 @EnableRuleMigrationSupport
 class KubePodServiceImplTest {
@@ -40,22 +40,82 @@ class KubePodServiceImplTest {
 
     @Test
     void listKubePodUsingGET() {
+        Deployment deployment1 = getDeployment("name1", "applicationGroup", "beta", 1);
+        Deployment deployment2 = getDeployment("name2", "applicationGroup", "gamma", 3);
+        Deployment deployment3 = getDeployment("name3", "foo", "bar", 1);
 
-        Map<String, String> label = Map.of("service", "blissful-goodall", "applicationGroup", "beta");
+        PodList expectedPodList = new PodListBuilder().withItems(getPod(deployment1),
+                getPod(deployment2),
+                getPod(deployment2),
+                getPod(deployment2),
+                getPod(deployment3)).build();
+        server.expect().get().withPath("/api/v1/namespaces/default/pods")
+                .andReturn(HttpURLConnection.HTTP_OK, expectedPodList)
+                .once();
 
-        Deployment deployment = new DeploymentBuilder()
+        DeploymentList deploymentList = new DeploymentListBuilder()
+                .withItems(deployment1, deployment2, deployment3)
+                .build();
+        server.expect().get().withPath("/apis/apps/v1/namespaces/default/deployments")
+                .andReturn(HttpURLConnection.HTTP_OK, deploymentList).times(2);
+
+        KubernetesClient client = server.getClient();
+
+        when(kubernetesClient.pods()).thenReturn(client.pods());
+        when(kubernetesClient.apps()).thenReturn(client.apps());
+
+        //call method
+        List<KubePod> actual = kubePodService.listKubePodUsingGET();
+
+        List<KubePod> expected = List.of(
+                KubePod.builder()
+                        .name("name1")
+                        .applicationGroup("beta")
+                        .runningPodsCount(1)
+                        .build(),
+                KubePod.builder()
+                        .name("name2")
+                        .applicationGroup("gamma")
+                        .runningPodsCount(3)
+                        .build(),
+                KubePod.builder()
+                        .name("name3")
+                        .runningPodsCount(1)
+                        .build()
+        );
+
+        assertThat(actual, containsInAnyOrder(expected.toArray()));
+
+    }
+
+    private Pod getPod(Deployment deployment) {
+        Pod pod = new PodBuilder()
+                .withNewMetadataLike(deployment.getSpec().getTemplate().getMetadata())
+                .withNamespace("default")
+                .endMetadata()
+                .withNewSpecLike(deployment.getSpec().getTemplate().getSpec()).endSpec()
+                .build();
+        pod.setStatus(new PodStatusBuilder().withPhase("Running").build());
+        return pod;
+    }
+
+    private Deployment getDeployment(String matchLabelValue, String deploymentMetaLabel, String deploymentMetaLabelValue, int replica) {
+
+        Map<String, String> label = Map.of("service", matchLabelValue, deploymentMetaLabel, deploymentMetaLabelValue);
+
+        return new DeploymentBuilder()
                 .withNewMetadata()
-                .withName("blissful-goodall-deployment")
+                .withName(matchLabelValue)
                 .withLabels(label)
                 .endMetadata()
                 .withNewSpec()
                 .withNewSelector()
-                .addToMatchLabels("service", "blissful-goodall")
+                .addToMatchLabels("service", matchLabelValue)
                 .endSelector()
-                .withReplicas(1)
+                .withReplicas(replica)
                 .withNewTemplate()
                 .withNewMetadata()
-                .addToLabels("service", "blissful-goodall")
+                .addToLabels("service", matchLabelValue)
                 .endMetadata()
                 .withNewSpec()
                 .withContainers()
@@ -71,42 +131,6 @@ class KubePodServiceImplTest {
                 .endTemplate()
                 .endSpec()
                 .build();
-
-        Pod pod = new PodBuilder()
-                .withNewMetadataLike(deployment.getSpec().getTemplate().getMetadata())
-                .withNamespace("default")
-                .withName("pod1")
-                .endMetadata()
-                .withNewSpecLike(deployment.getSpec().getTemplate().getSpec()).endSpec()
-                .build();
-        pod.setStatus(new PodStatusBuilder().withPhase("Running").build());
-
-        PodList expectedPodList = new PodListBuilder().withItems(pod).build();
-        server.expect().get().withPath("/api/v1/namespaces/default/pods")
-                .andReturn(HttpURLConnection.HTTP_OK, expectedPodList)
-                .once();
-
-        DeploymentList deploymentList = new DeploymentListBuilder()
-                .withItems(deployment)
-                .build();
-        server.expect().get().withPath("/apis/apps/v1/namespaces/default/deployments")
-                .andReturn(HttpURLConnection.HTTP_OK, deploymentList).times(2);
-
-        KubernetesClient client = server.getClient();
-
-        when(kubernetesClient.pods()).thenReturn(client.pods());
-        when(kubernetesClient.apps()).thenReturn(client.apps());
-
-        //call method
-        List<KubePod> kubePods = kubePodService.listKubePodUsingGET();
-
-        System.out.println("kubePods = " + kubePods);
-
     }
-
-    @Test
-    void testListKubePodUsingGET() {
-    }
-
 
 }
