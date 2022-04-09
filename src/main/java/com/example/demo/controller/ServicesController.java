@@ -32,7 +32,7 @@ public class ServicesController {
 
         log.info("Handling request for {}", applicationGroup);
 
-        List<KubePod> kubePods = kubePodService.getKubePodUsingGET(applicationGroup.trim());
+        List<KubePod> kubePods = kubePodService.listKubePodUsingGET(applicationGroup.trim());
 
         if (CollectionUtils.isEmpty(kubePods)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

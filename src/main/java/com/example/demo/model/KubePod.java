@@ -19,7 +19,7 @@ public class KubePod implements Serializable {
     private String applicationGroup;
 
     @JsonProperty("runningPodsCount")
-    private int runningPodsCount;
+    private long runningPodsCount;
 
 }
 

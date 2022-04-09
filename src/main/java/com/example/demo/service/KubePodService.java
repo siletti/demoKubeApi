@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface KubePodService {
 
-    List<KubePod> getKubePodUsingGET(String applicationGroup);
+    List<KubePod> listKubePodUsingGET(String applicationGroup);
 
     List<KubePod> listKubePodUsingGET();
 }
