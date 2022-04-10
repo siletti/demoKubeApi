@@ -9,6 +9,7 @@ import io.fabric8.kubernetes.api.model.apps.DeploymentListBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import org.junit.Rule;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
@@ -38,8 +39,8 @@ class KubePodServiceImplTest {
     @Rule
     public KubernetesServer server = new KubernetesServer();
 
-    @Test
-    void listKubePodUsingGET() {
+    @BeforeEach
+    public void initEach() {
         Deployment deployment1 = getDeployment("name1", "applicationGroup", "beta", 1);
         Deployment deployment2 = getDeployment("name2", "applicationGroup", "gamma", 3);
         Deployment deployment3 = getDeployment("name3", "foo", "bar", 1);
@@ -57,8 +58,33 @@ class KubePodServiceImplTest {
                 .withItems(deployment1, deployment2, deployment3)
                 .build();
         server.expect().get().withPath("/apis/apps/v1/namespaces/default/deployments")
-                .andReturn(HttpURLConnection.HTTP_OK, deploymentList).times(2);
+                .andReturn(HttpURLConnection.HTTP_OK, deploymentList).once();
+    }
 
+    @Test
+    void listKubePodUsingGeTest() {
+        KubernetesClient client = server.getClient();
+
+        when(kubernetesClient.pods()).thenReturn(client.pods());
+        when(kubernetesClient.apps()).thenReturn(client.apps());
+
+        //call method
+        List<KubePod> actual = kubePodService.listKubePodUsingGET("gamma");
+
+        List<KubePod> expected = List.of(
+                KubePod.builder()
+                        .name("name2")
+                        .applicationGroup("gamma")
+                        .runningPodsCount(3)
+                        .build()
+        );
+
+        assertThat(actual, containsInAnyOrder(expected.toArray()));
+
+    }
+
+    @Test
+    void listKubePodUsingGeTestAll() {
         KubernetesClient client = server.getClient();
 
         when(kubernetesClient.pods()).thenReturn(client.pods());

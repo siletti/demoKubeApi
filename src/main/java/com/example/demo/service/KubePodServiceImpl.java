@@ -18,6 +18,10 @@ public class KubePodServiceImpl implements KubePodService {
 
     private final KubernetesClient client;
 
+    private final static String nameSpace = "default";  // Can be put all in config props
+    private final static String matchLabel = "service";
+    private final static String deploymentMetaLabel = "applicationGroup";
+
     public KubePodServiceImpl(KubernetesClient client) {
         this.client = client;
     }
@@ -31,7 +35,7 @@ public class KubePodServiceImpl implements KubePodService {
 
     @Override
     public List<KubePod> listKubePodUsingGET() {
-        return kubeList("default", "service", "applicationGroup");
+        return kubeList(nameSpace, matchLabel, deploymentMetaLabel);
     }
 
     private List<KubePod> kubeList(String nameSpace, String matchLabel, String deploymentMetaLabel) {
