@@ -45,6 +45,7 @@ public class KubePodServiceImpl implements KubePodService {
                 .filter(pod -> pod.getStatus().getPhase().equals("Running"))
                 .map(Pod::getMetadata)
                 .map(ObjectMeta::getLabels)
+                .filter(Objects::nonNull) // NPE on pods without metadata.labels
                 .map(stringStringMap -> stringStringMap.get(matchLabel))
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
