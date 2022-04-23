@@ -7,13 +7,6 @@ time to expose some information on the current state of each service.
 
 ## Tasks
 
-For any of the following tasks please use git to track the status and progress of your development and include the git
-repository (.git/) in the upload.
-
-You can choose whatever programming language you feel most comfortable with. Please include instructions on how to build
-and run the
-application.
-
 You will need the following:
 
 - [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
